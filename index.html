@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>inventario inteligente</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
 </head>
 <body> 
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
@@ -50,6 +51,7 @@
                         <th>Categoría</th>
                         <th class="text-center">Stock</th>
                         <th>Vencimiento</th>
+                        <th class="text-center">Acciones</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -83,7 +85,19 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Cantidad actual</label>
-                        <input type="number" id="cantidadArticulo" class="form-control" value="1">
+                        <input type="number" id="cantidadArticulo" class="form-control" value="0">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Categoría</label>
+                        <select class="form-select" id="categoriaArticulo">
+                            <option value="alimentos">Alimentos</option>
+                            <option value="limpieza">Limpieza</option>
+                            <option value="otros">Otros</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Vencimiento</label>
+                        <input type="date" id="vencimiento" class="form-control" placeholder="ejemplo: 15/06/2026">
                     </div>
                 </form>
             </div>
@@ -96,36 +110,85 @@
  </div>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+    // 1. Al cargar la página, leemos la memoria del navegador
+    document.addEventListener('DOMContentLoaded', cargarHistorial);
+
     function guardarProducto() {
-        // 1. Capturamos lo que el usuario escribió
+        // Recogemos los datos de los inputs
         let nombre = document.getElementById('nombreArticulo').value;
         let cantidad = document.getElementById('cantidadArticulo').value;
+        let categoria = document.getElementById('categoriaArticulo').value;
+        let fecha = document.getElementById('vencimiento').value;
 
-        // 2. Si el nombre está vacío, no hacemos nada
-        if(nombre === "") {
-            alert("Por favor, escribe el nombre del producto");
+        // Validación de seguridad
+        if (nombre === "" || fecha === "") {
+            alert("llena el nombre y la fecha para poder guardar.");
             return;
         }
 
-        // 3. Buscamos la tabla para meter el nuevo dato
-        let tabla = document.querySelector('table tbody');
+        // Creamos el objeto del producto corregido
+        const productoObj = { nombre, cantidad, categoria, fecha };
 
-        // 4. Creamos una nueva fila (TR) con sus celdas (TD)
-        let nuevaFila = `
-            <tr>
-                <td>${nombre}</td>
-                <td><span class="badge bg-info text-dark">General</span></td>
-                <td>${cantidad}</td>
-                <td>N/A</td>
-            </tr>
-        `;
+        // GUARDAR EN MEMORIA (LocalStorage)
+        let inventario = JSON.parse(localStorage.getItem('mis_productos')) || [];
+        inventario.push(productoObj);
+        localStorage.setItem('mis_productos', JSON.stringify(inventario));
 
-        // 5. La pegamos en la tabla
-        tabla.innerHTML += nuevaFila;
+        // Dibujar inmediatamente en la tabla
+        dibujarFila(productoObj);
 
-        // 6. Limpiamos el formulario y cerramos el modal
+        // LIMPIEZA DE CAMPOS (Para que queden vacíos al terminar)
         document.getElementById('nombreArticulo').value = "";
-        bootstrap.Modal.getInstance(document.getElementById('modalAgregar')).hide();
+        document.getElementById('cantidadArticulo').value = "1";
+        document.getElementById('vencimiento').value = "";
+
+        // CERRAR VENTANA (Modal)
+        let modalElement = document.getElementById('modalAgregar');
+        let modalBus = bootstrap.Modal.getInstance(modalElement);
+        modalBus.hide();
+    }
+
+   function cargarHistorial() {
+        let inventario = JSON.parse(localStorage.getItem('mis_productos')) || [];
+        let tabla = document.querySelector("table tbody");
+        if(tabla) {
+            tabla.innerHTML = ""; // Limpiamos para no duplicar
+            // Corregido: agregamos (producto, i)
+            inventario.forEach((producto, i) => dibujarFila(producto, i));
+        }
+    }
+
+    function dibujarFila(producto, index) {
+        let tabla = document.querySelector("table tbody");
+        let fila = `
+            <tr>
+                <td>${producto.nombre}</td>
+                <td><span class="badge bg-primary">${producto.categoria}</span></td>
+                <td class="text-center">${producto.cantidad}</td>
+                <td>${producto.fecha}</td>
+                <td class="text-center">
+                    <button class="btn btn-outline-danger btn-sm" onclick="eliminarProducto(${index})">
+                        <i class="bi bi-trash3-fill"></i>
+                    </button>
+                </td>
+            </tr>`;
+        tabla.innerHTML += fila;
+    }
+
+    function eliminarProducto(index) {
+        if (confirm("¿Ya se terminó este producto?")) {
+            // Corregido: quitamos los "=" extras
+            let inventario = JSON.parse(localStorage.getItem('mis_productos')) || [];
+            
+            // Corregido: cambiamos slice por splice
+            inventario.splice(index, 1);
+            
+            // Guardamos la lista actualizada
+            localStorage.setItem('mis_productos', JSON.stringify(inventario));
+            
+            // Refrescamos la tabla para que desaparezca el borrado
+            cargarHistorial();
+        }
     }
 </script>
 </body>
